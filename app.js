@@ -14,6 +14,7 @@ app.use(bodyParser.json());
 
 //CONEXIÓN//
 
+//falta poner si es que hay un error en la conexión a la db
 const connectionString = 'postgres://ujhvhevl:P6I_Q-1wZ23PAlsQojsLk2Y-r04__GpN@otto.db.elephantsql.com/ujhvhevl';
 const client = new Client({
     connectionString: connectionString,
