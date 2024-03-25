@@ -4,6 +4,11 @@ const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Client } = require('pg');
+const nodemailer = require('nodemailer');
+
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey("SG.YQRMPK9CH1JPGKQQDNSGGNF3");
+
 const app = express();
 const PORT = 3000;
 const secretKey = "yasuo";
@@ -13,10 +18,14 @@ app.use(cors());
 app.use(express.json());
 app.use(bodyParser.json());
 
+const nombre_app = "S-MENTAL";
+//psicologo: type = P_USER8492#$2ASE_392AKSMG
+//usuario: type = US373_USER$%7FEV
+
 //CONEXIÓN//
 
 //falta poner si es que hay un error en la conexión a la db
-const connectionString = 'postgres://ujhvhevl:P6I_Q-1wZ23PAlsQojsLk2Y-r04__GpN@otto.db.elephantsql.com/ujhvhevl';
+const connectionString = 'postgres://qzleeezl:m1mRE794ygxu-Krmay3fZl1SeKpHBAqo@otto.db.elephantsql.com/qzleeezl';
 const client = new Client({
     connectionString: connectionString,
 });
@@ -25,6 +34,62 @@ client.connect();
 ////////////PETICIONES///////////
 
 //post, agregar cuenta de psicólogo desde la cuenta ADMIN
+
+//registro
+app.post("/registeruser", async (req, res) => {
+    try {
+        const { nombre, correo, contrasena, edad, numero_telefono } = req.body;
+
+        const result = await client.query(`
+        SELECT usuario_id FROM usuario WHERE correo = '${correo}' OR nombre_usuario = '${nombre}'
+        `);
+        const user = result.rows;
+
+        if (user.length > 0) {
+            res.status(401).json({ message: "correo nombre" });
+            return;
+        }
+
+        const signup = await client.query(`
+        INSERT INTO usuario (nombre_usuario, correo, contrasena, edad, numero_telefono) VALUES ('${nombre}','${correo}','${contrasena}','${edad}','${numero_telefono}')
+        `);
+        const registrado = signup.rowCount;
+
+        if (registrado > 0) {
+            res.status(200).json({ message: "exito" })
+        } else {
+            res.status(400).json({ message: "fallo" })
+        }
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+})
+
+//registro de psicólogo
+app.post('/registerpsicologo', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        const msg = {
+            to: email,
+            from: 'correoespecifico.1mental@gmail.com',
+            subject: `Verificación para formar parte de ${nombre_app} como psicólogo/a`,
+            text: 'Gracias por tu interés en formar parte de nuestra aplicación. Por favor, responde a este correo con tu currículum, certificado de psicología profesional y tu interés por participar en nuestra red, además de cualquier información adicional que estimes conveniente. Estaremos atento a tu respuesta. \n\nSaludos cordiales, equipo de administración.',
+          };
+          
+          sgMail.send(msg)
+            .then(() => res.status(200).json({ message: 'exito' }))
+            .catch(error => {
+                console.log(error);
+                res.status(500).json({ message: 'fallo' })
+            });
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ message: 'fallo' });
+    }
+});
 
 app.post('/login', async (req, res) => {
     try {
@@ -44,14 +109,14 @@ app.post('/login', async (req, res) => {
 
             const bloq = resultado[0].bloqueado;
 
-            if(bloq) res.status(401).json({ message: 'usuario bloqueado' });
+            if (bloq) res.status(401).json({ message: 'usuario bloqueado' });
 
             var psicologo = resultado[0].psicologo_id;
             var tipo = "US373_USER$%7FEV"; //por defecto usuario
 
             if (psicologo) {
                 tipo = "P_USER8492#$2ASE_392AKSMG";
-            }else {
+            } else {
                 psicologo = null
             }
 
@@ -71,13 +136,13 @@ app.post('/login', async (req, res) => {
     }
 });
 
-app.get("/query", async (req, res)=> {
+app.get("/query", async (req, res) => {
     const result = await client.query(`
         SELECT * FROM usuario
         `);
-        const resultado = result.rows;
-    
-        res.json(resultado);
+    const resultado = result.rows;
+
+    res.json(resultado);
 
 })
 
