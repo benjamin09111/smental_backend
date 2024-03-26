@@ -162,7 +162,21 @@ app.post('/verifyToken', (req, res) => {
 //////////////////////////////////////
 
 //get para obtener todas las publicaciones de los usuarios
+app.get("/getPublicaciones", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT * FROM usuario WHERE correo = '${correo}' OR nombre_usuario = '${nombre}'
+        `);
 
+        const publicaciones = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(publicaciones)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+})
 //get para obtener todos los psicologos
 
 //INICIATE//
