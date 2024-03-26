@@ -4,10 +4,9 @@ const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Client } = require('pg');
-const nodemailer = require('nodemailer');
 
 const sgMail = require('@sendgrid/mail');
-sgMail.setApiKey("SG.YQRMPK9CH1JPGKQQDNSGGNF3");
+sgMail.setApiKey("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");
 
 const app = express();
 const PORT = 3000;
@@ -77,9 +76,8 @@ app.post('/registerpsicologo', async (req, res) => {
             from: 'correoespecifico.1mental@gmail.com',
             subject: `Verificación para formar parte de ${nombre_app} como psicólogo/a`,
             text: 'Gracias por tu interés en formar parte de nuestra aplicación. Por favor, responde a este correo con tu currículum, certificado de psicología profesional y tu interés por participar en nuestra red, además de cualquier información adicional que estimes conveniente. Estaremos atento a tu respuesta. \n\nSaludos cordiales, equipo de administración.',
-          };
-          
-          sgMail.send(msg)
+        };
+        sgMail.send(msg)
             .then(() => res.status(200).json({ message: 'exito' }))
             .catch(error => {
                 console.log(error);
@@ -141,9 +139,7 @@ app.get("/query", async (req, res) => {
         SELECT * FROM usuario
         `);
     const resultado = result.rows;
-
     res.json(resultado);
-
 })
 
 //verificarToken-Autorizado
@@ -162,6 +158,12 @@ app.post('/verifyToken', (req, res) => {
         res.json({ isValid: true, user: decoded });
     });
 });
+
+//////////////////////////////////////
+
+//get para obtener todas las publicaciones de los usuarios
+
+//get para obtener todos los psicologos
 
 //INICIATE//
 app.listen(PORT, () => {
