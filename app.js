@@ -188,9 +188,9 @@ app.get("/getPublicacionesHashtag", async (req, res) => {
         AND h.nombre ='${h.nombre}' GROUP BY p.fecha_publicacion, p.titulo, p.descripcion
 `);
 
-        const publicaciones = result.rows;
+        const publicaciones_hashtag = result.rows;
         // Respuesta de lo que retorno la BDD
-        res.status(200).json(publicaciones)
+        res.status(200).json(publicaciones_hashtag)
 
     } catch (error) {
         console.error('Error en la consulta GET:', error);
@@ -206,9 +206,9 @@ app.get("/getPublicacionesRelevancia", async (req, res) => {
         WHERE p.autor_id = u.usuario_id ORDER BY p.nivel_relevancia DESC
 `);
 
-        const publicaciones = result.rows;
+        const publicaciones_relevancia = result.rows;
         // Respuesta de lo que retorno la BDD
-        res.status(200).json(publicaciones)
+        res.status(200).json(publicaciones_relevancia)
 
     } catch (error) {
         console.error('Error en la consulta GET:', error);
@@ -223,9 +223,9 @@ app.get("/getPublicacionesFecha", async (req, res) => {
         SELECT u.nombre_usuario, p.fecha_publicacion, p.titulo, p.descripcion FROM publicacion p, usuario u WHERE p.autor_id = u.usuario_id ORDER BY p.fecha_publicacion DESC
 `);
 
-        const publicaciones = result.rows;
+        const publicaciones_fecha = result.rows;
         // Respuesta de lo que retorno la BDD
-        res.status(200).json(publicaciones)
+        res.status(200).json(publicaciones_fecha)
 
     } catch (error) {
         console.error('Error en la consulta GET:', error);
@@ -241,9 +241,9 @@ app.get("/getComentarios", async (req, res) => {
         WHERE c.publicacion_id = p.publicacion_id AND c.usuario_id = u.usuario_id
 `);
 
-        const publicaciones = result.rows;
+        const comentarios = result.rows;
         // Respuesta de lo que retorno la BDD
-        res.status(200).json(publicaciones)
+        res.status(200).json(comentarios)
 
     } catch (error) {
         console.error('Error en la consulta GET:', error);
@@ -259,9 +259,9 @@ app.get("/getReportePublicacion", async (req, res) => {
         WHERE pr.publicacion_id = p.publicacion_id AND pr.reportador_id = u.usuario_id
 `);
 
-        const publicaciones = result.rows;
+        const publicaciones_reportes = result.rows;
         // Respuesta de lo que retorno la BDD
-        res.status(200).json(publicaciones)
+        res.status(200).json(publicaciones_reportes)
 
     } catch (error) {
         console.error('Error en la consulta GET:', error);
@@ -277,9 +277,9 @@ app.get("/getReporteComentario", async (req, res) => {
         WHERE cr.c_reporte_id = p.publicacion_id AND cr.reportador_id = u.usuario_id
 `);
 
-        const publicaciones = result.rows;
+        const comentarios_reportes = result.rows;
         // Respuesta de lo que retorno la BDD
-        res.status(200).json(publicaciones)
+        res.status(200).json(comentarios_reportes)
 
     } catch (error) {
         console.error('Error en la consulta GET:', error);
@@ -295,9 +295,9 @@ app.get("/getReportePost", async (req, res) => {
         WHERE po.post_id = p.post_id AND po.reportador_id = u.usuario_id
 `);
 
-        const publicaciones = result.rows;
+        const post_reportes = result.rows;
         // Respuesta de lo que retorno la BDD
-        res.status(200).json(publicaciones)
+        res.status(200).json(post_reportes)
 
     } catch (error) {
         console.error('Error en la consulta GET:', error);
