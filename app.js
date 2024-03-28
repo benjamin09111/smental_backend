@@ -165,7 +165,7 @@ app.post('/verifyToken', (req, res) => {
 app.get("/getPublicaciones", async (req, res) => {
     try {
         const result = await client.query(`
-        SELECT u.nombre_usuario, p.fecha_publicacion, p.titulo, p.descripcion FROM publicacion p, usuario u WHERE p.autor_id = u.usuario_id`);
+        SELECT * FROM publicacion`);
 
         const publicaciones = result.rows;
         // Respuesta de lo que retorno la BDD
@@ -186,6 +186,113 @@ app.get("/getPublicacionesHashtag", async (req, res) => {
         AND uh.hashtag_id = h.hashtag_id 
         AND h.hashtag_id = p.hashtag_id 
         AND h.nombre ='${h.nombre}' GROUP BY p.fecha_publicacion, p.titulo, p.descripcion
+`);
+
+        const publicaciones = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(publicaciones)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para obtener publicaciones basadas en el nivel de relevancia
+app.get("/getPublicacionesRelevancia", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT u.nombre_usuario, p.fecha_publicacion, p.titulo, p.descripcion, p.nivel_relevancia FROM publicacion p, usuario u 
+        WHERE p.autor_id = u.usuario_id ORDER BY p.nivel_relevancia DESC
+`);
+
+        const publicaciones = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(publicaciones)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para obtener todas las publicaciones de usuarios basadas en la fecha más reciente
+app.get("/getPublicacionesFecha", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT u.nombre_usuario, p.fecha_publicacion, p.titulo, p.descripcion FROM publicacion p, usuario u WHERE p.autor_id = u.usuario_id ORDER BY p.fecha_publicacion DESC
+`);
+
+        const publicaciones = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(publicaciones)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para obtener todos los comentarios
+app.get("/getComentarios", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT u.nombre_usuario, p.publicacion_id, c.descripcion FROM comentario c, publicacion p, usuario u 
+        WHERE c.publicacion_id = p.publicacion_id AND c.usuario_id = u.usuario_id
+`);
+
+        const publicaciones = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(publicaciones)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer todos los reportes de publicacion 
+app.get("/getReportePublicacion", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT u.nombre_usuario AS reportador, pr.titulo, pr.descripcion FROM p_reporte pr, usuario u , publicacion p 
+        WHERE pr.publicacion_id = p.publicacion_id AND pr.reportador_id = u.usuario_id
+`);
+
+        const publicaciones = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(publicaciones)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer todos los reportes de comentario 
+app.get("/getReporteComentario", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT u.nombre_usuario AS reportador, cr.titulo, cr.descripcion FROM c_reporte cr, usuario u , publicacion p 
+        WHERE cr.c_reporte_id = p.publicacion_id AND cr.reportador_id = u.usuario_id
+`);
+
+        const publicaciones = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(publicaciones)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer todos los reportes de post 
+app.get("/getReportePost", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT u.nombre_usuario AS reportador, po.titulo, po.descripcion FROM post_reporte po, usuario u , post p 
+        WHERE po.post_id = p.post_id AND po.reportador_id = u.usuario_id
 `);
 
         const publicaciones = result.rows;
