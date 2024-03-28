@@ -165,8 +165,7 @@ app.post('/verifyToken', (req, res) => {
 app.get("/getPublicaciones", async (req, res) => {
     try {
         const result = await client.query(`
-        SELECT * FROM usuario WHERE correo = '${correo}' OR nombre_usuario = '${nombre}'
-        `);
+        SELECT u.nombre_usuario, p.fecha_publicacion, p.titulo, p.descripcion FROM publicacion p, usuario u WHERE p.autor_id = u.usuario_id`);
 
         const publicaciones = result.rows;
         // Respuesta de lo que retorno la BDD
@@ -176,8 +175,28 @@ app.get("/getPublicaciones", async (req, res) => {
         console.error('Error en la consulta GET:', error);
         res.status(500).json({ message: 'Error en la consulta GET' });
     }
-})
-//get para obtener todos los psicologos
+});
+//get para obtener todas las publicaciones basadas en un hashtag
+
+app.get("/getPublicacionesHashtag", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT p.fecha_publicacion, p.titulo, p.descripcion FROM publicacion p, usuario u, usuario_hashtag uh, hashtag h
+        WHERE u.usuario_id = uh.usuario_id 
+        AND uh.hashtag_id = h.hashtag_id 
+        AND h.hashtag_id = p.hashtag_id 
+        AND h.nombre ='${h.nombre}' GROUP BY p.fecha_publicacion, p.titulo, p.descripcion
+`);
+
+        const publicaciones = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(publicaciones)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
 
 //INICIATE//
 app.listen(PORT, () => {
