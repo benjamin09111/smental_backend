@@ -305,6 +305,239 @@ app.get("/getReportePost", async (req, res) => {
     }
 });
 
+// get para traer conteo de reportes a usuarios en publicaciones
+app.get("/getConteoReportesUsuarioPublicaciones", async (req, res) => {
+    try {
+        const result = await client.query(`
+        WITH conteo AS (SELECT p.publicacion_id, p.autor_id, count(*) FROM p_reporte pr, publicacion p WHERE pr.publicacion_id = p.publicacion_id GROUP BY p.publicacion_id, p.autor_id)
+        SELECT u.usuario_id, u.nombre_usuario, c.count FROM usuario u, conteo c WHERE c.autor_id = u.usuario_id ORDER BY c.count DESC
+        `);
+
+        const conteo_report_u_p = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(conteo_report_u_p)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer conteo de reportes a usuarios en comentarios
+app.get("/getConteoReportesUsuarioComentarios", async (req, res) => {
+    try {
+        const result = await client.query(`
+        WITH conteo AS (SELECT c.comentario_id, c.usuario_id, count(*) FROM c_reporte cr, comentario c WHERE cr.comentario_id = c.comentario_id GROUP BY c.comentario_id, c.usuario_id)
+        SELECT u.usuario_id, u.nombre_usuario, c.count FROM usuario u, conteo c WHERE c.usuario_id = u.usuario_id ORDER BY c.count DESC
+        `);
+
+        const conteo_report_u_c = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(conteo_report_u_c)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer conteo de reportes a psicologos en posts
+app.get("/getConteoReportesPsicologoPost", async (req, res) => {
+    try {
+        const result = await client.query(`
+        WITH conteo AS (SELECT p.post_id, p.psicologo_id, count(*) FROM post_reporte pr, post p WHERE pr.post_id = p.post_id GROUP BY p.post_id, p.psicologo_id)
+        SELECT p.nombre_1, p.apellido_1, c.count FROM psicologo p, conteo c WHERE c.psicologo_id = p.psicologo_id ORDER BY c.count DESC
+        `);
+
+        const conteo_report_p_p = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(conteo_report_p_p)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+
+// get para traer a usuario en base a su id
+app.get("/getUsuarioPorId", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT u.nombre_usuario, u.edad, u.correo, ub.nombre,u.psicologos_seguidos, u.numero_telefono FROM usuario u, ubicacion ub 
+        WHERE u.ubicacion_id = ub.ubicacion_id AND u.usuario_id = '${u.usuario_id}'
+        `);
+
+        const usuario_por_id = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(usuario_por_id)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer a usuario en base a su nombre
+app.get("/getUsuarioPorNombre", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT u.nombre_usuario, u.edad, u.correo, ub.nombre,u.psicologos_seguidos, u.numero_telefono FROM usuario u, ubicacion ub 
+        WHERE u.ubicacion_id = ub.ubicacion_id AND u.usuario_id = '${u.nombre_usuario}'
+        `);
+
+        const usuario_por_nombre = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(usuario_por_nombre)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer a psicologos hombres
+app.get("/getPsicologoHombre", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT nombre_1, apellido_1, apellido_2, calificacion, numero_telefono, universidad, descripcion, sexo, cantidad_seguidores FROM psicologo WHERE sexo = 'Masculino'
+        `);
+
+        const psicologo_hombre = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(psicologo_hombre)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+
+// get para traer a psicologos mujeres
+app.get("/getPsicologoMujer", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT nombre_1, apellido_1, apellido_2, calificacion, numero_telefono, universidad, descripcion, sexo, cantidad_seguidores FROM psicologo WHERE sexo = 'Femenino'
+        `);
+
+        const psicologo_mujer = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(psicologo_mujer)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer a psicologos en base a la ubicacion
+app.get("/getPsicologoPorUbicacion", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT p.nombre_1, p.apellido_1, p.apellido_2, p.calificacion, p.numero_telefono, p.universidad, p.descripcion, p.sexo, p.cantidad_seguidores FROM psicologo p, usuario u, ubicacion ub 
+        WHERE p.usuario_id = u.usuario_id AND u.ubicacion_id = ub.ubicacion_id AND ub.nombre = '${ub.nombre}'
+        `);
+
+        const psicologo_por_ubicacion = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(psicologo_por_ubicacion)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer a psicologos por orden de calificacion
+app.get("/getPsicologoPorCalificacion", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT nombre_1, apellido_1, apellido_2, calificacion, numero_telefono, universidad, descripcion, sexo, cantidad_seguidores FROM psicologo ORDER BY calificacion DESC
+        `);
+
+        const psicologo_por_calificacion = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(psicologo_por_calificacion)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer a psicologos por orden de cantidad de seguidores
+app.get("/getPsicologoPorSeguidores", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT nombre_1, apellido_1, apellido_2, calificacion, numero_telefono, universidad, descripcion, sexo, cantidad_seguidores FROM psicologo ORDER BY cantidad_seguidores DESC
+        `);
+
+        const psicologo_por_seguidores = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(psicologo_por_seguidores)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer a las personas que un usuario sigue
+app.get("/getUsuarioSigue", async (req, res) => {
+    try {
+        const result = await client.query(`
+        WITH seguidos AS (SELECT u.usuario_id, u.nombre_usuario, s.seguido_id FROM usuario u, seguidor s WHERE u.usuario_id = s.seguidor_id)
+        SELECT u.nombre_usuario FROM usuario u, seguidos s  WHERE u.usuario_id = s.seguido_id AND s.usuario_id = '${s.usuario_id}' 
+        `);
+
+        const usuario_sigue = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(usuario_sigue)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer hashtags ordenados por interes
+app.get("/getHashtagInteres", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT hashtag_id, nivel_interes FROM usuario_hashtag ORDER BY nivel_interes desc
+        `);
+
+        const hashtag_interes = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(hashtag_interes)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// get para traer psicologo por su nombre
+app.get("/getPsicologoPorNombre", async (req, res) => {
+    try {
+        const result = await client.query(`
+        SELECT nombre_1,  apellido_1, apellido_2, calificacion, numero_telefono, universidad, descripcion, sexo FROM psicologo WHERE nombre_1 = '${nombre_1}'
+        `);
+
+        const psicologo_por_nombre = result.rows;
+        // Respuesta de lo que retorno la BDD
+        res.status(200).json(psicologo_por_nombre)
+
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+//Faltan querys relacionadas con traer posts por la pregunta que dejé en documento (nose si debían traer imágenes o no xd)
+//Falta lo de crear post, crear publicacion, todos los updates y delete
+
 //INICIATE//
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en el puerto ${PORT}`);
