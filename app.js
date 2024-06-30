@@ -179,11 +179,27 @@ app.post('/loginadmin', async (req, res) => {
 
 // Ruta para crear un psicólogo
 app.post('/create_psicologo', async (req, res) => {
+    const {nombre, apellido, apellido_2, universidad, descripcion, sexo, edad, telefono, region, ciudad, comuna, pais, metodo} = req.body;
     try {
-        const psychologist = new User(req.body);
+        const psychologist = new User({
+                nombre: nombre,
+                apellido: apellido,
+                apellido_2: apellido_2,
+                universidad: universidad,
+                descripcion: descripcion,
+                sexo: sexo,
+                edad: parseInt(edad),
+                telefono: telefono,
+                region: region,
+                ciudad: ciudad,
+                comuna: comuna,
+                pais: pais,
+                metodo: metodo,
+            });
         await psychologist.save();
-        res.status(201).json(psychologist);
+        res.status(201).json({ message: "success"});
     } catch (error) {
+        console.log(error);
         res.status(400).json({ error: error.message });
     }
 });

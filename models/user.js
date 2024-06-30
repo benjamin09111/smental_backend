@@ -13,7 +13,9 @@ const userSchema = new mongoose.Schema({
     ciudad: { type: String, required: true },
     comuna: { type: String, required: true },
     pais: { type: String, required: true },
-    metodo: { type: String, required: true }
+    correo: { type: String, required: true },
+    metodo: { type: String, required: true },
+    imagen: { type: String}
 }, {
     timestamps: true
 });
