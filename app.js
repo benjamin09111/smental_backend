@@ -4,6 +4,9 @@ const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Client } = require('pg');
+const mongoose = require('mongoose');
+
+const User = require('./models/User');
 
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey("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");
@@ -18,119 +21,180 @@ app.use(express.json());
 app.use(bodyParser.json());
 
 const nombre_app = "S-MENTAL";
-//psicologo: type = P_USER8492#$2ASE_392AKSMG
-//usuario: type = US373_USER$%7FEV
 
-//CONEXIÓN//
 
-//falta poner si es que hay un error en la conexión a la db
-const connectionString = 'postgres://qzleeezl:m1mRE794ygxu-Krmay3fZl1SeKpHBAqo@otto.db.elephantsql.com/qzleeezl';
+//CONEXIÓN ESQL//
+
+const connectionString = 'postgres://ahybdvnl:Y0VcIkj_nzu7_olq87gTBzJ8AkI0fxhd@otto.db.elephantsql.com/ahybdvnl';
 const client = new Client({
     connectionString: connectionString,
 });
 client.connect();
 
+//CONEXIÓN MONGODB//
+const uri = "mongodb+srv://benssyca123:olakase123@cluster0.ndz7ajb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"; // Reemplaza con tu cadena de conexión
+
+mongoose.connect(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
+.then(() => console.log("Conectado a MongoDB Atlas"))
+.catch((error) => console.error("Error al conectar con MongoDB Atlas:", error));
+
+
 ////////////PETICIONES///////////
 
-//post, agregar cuenta de psicólogo desde la cuenta ADMIN
 
 //registro
 app.post("/registeruser", async (req, res) => {
     try {
-        const { nombre, correo, contrasena, edad, numero_telefono } = req.body;
+        const { username, password, name, country, age, email, phone } = req.body;
 
-        const result = await client.query(`
-        SELECT usuario_id FROM usuario WHERE correo = '${correo}' OR nombre_usuario = '${nombre}'
-        `);
-        const user = result.rows;
+        const type = 0; //0 free, 1 vip
+        const banned = false;
+        const reports = 0;
 
-        if (user.length > 0) {
-            res.status(401).json({ message: "correo nombre" });
+        // Check if email already exists
+        const result1 = await client.query(
+            `SELECT contact_id FROM contacts WHERE email = $1`,
+            [email]
+        );
+
+        // Check if username already exists
+        const result2 = await client.query(
+            `SELECT user_id FROM users WHERE username = $1`,
+            [username]
+        );
+
+        if (result1.rows.length > 0) {
+            res.status(401).json({ message: "El correo ya está en uso" });
+            return;
+        } else if (result2.rows.length > 0) {
+            res.status(401).json({ message: "El nombre de usuario ya está en uso" });
             return;
         }
 
-        const signup = await client.query(`
-        INSERT INTO usuario (nombre_usuario, correo, contrasena, edad, numero_telefono) VALUES ('${nombre}','${correo}','${contrasena}','${edad}','${numero_telefono}')
-        `);
-        const registrado = signup.rowCount;
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-        if (registrado > 0) {
-            res.status(200).json({ message: "exito" })
+        const signup = await client.query(
+            `
+            INSERT INTO users (username, password, name, country, age, type, banned, reports) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+            RETURNING user_id
+            `,
+            [username, hashedPassword, name, country, parseInt(age), parseInt(type), banned, reports]
+        );
+        const userId = signup.rows[0].user_id;
+
+        if (!userId) {
+            res.status(400).json({ message: "fail" });
+            return;
+        }
+
+        const signup2 = await client.query(
+            `
+            INSERT INTO contacts (user_id, email, phone) 
+            VALUES ($1, $2, $3)
+            `,
+            [userId, email, phone]
+        );
+        const registrado2 = signup2.rowCount;
+
+        if (registrado2 > 0) {
+            res.status(200).json({ message: "success" });
         } else {
-            res.status(400).json({ message: "fallo" })
+            res.status(400).json({ message: "fail" });
         }
 
     } catch (error) {
-        console.error('Error en la consulta GET:', error);
-        res.status(500).json({ message: 'Error en la consulta GET' });
-    }
-})
-
-//registro de psicólogo
-app.post('/registerpsicologo', async (req, res) => {
-    try {
-        const { email } = req.body;
-
-        const msg = {
-            to: email,
-            from: 'correoespecifico.1mental@gmail.com',
-            subject: `Verificación para formar parte de ${nombre_app} como psicólogo/a`,
-            text: 'Gracias por tu interés en formar parte de nuestra aplicación. Por favor, responde a este correo con tu currículum, certificado de psicología profesional y tu interés por participar en nuestra red, además de cualquier información adicional que estimes conveniente. Estaremos atento a tu respuesta. \n\nSaludos cordiales, equipo de administración.',
-        };
-        sgMail.send(msg)
-            .then(() => res.status(200).json({ message: 'exito' }))
-            .catch(error => {
-                console.log(error);
-                res.status(500).json({ message: 'fallo' })
-            });
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({ message: 'fallo' });
+        console.error('Error en la consulta:', error);
+        res.status(500).json({ message: 'Error en la consulta' });
     }
 });
 
-app.post('/login', async (req, res) => {
+app.post('/loginuser', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        // Seleccionar el usuario y la contraseña cifrada de la base de datos
+        const result = await client.query(`
+            SELECT user_id, password, banned FROM users WHERE username = '${username}'
+        `);
+        const user = result.rows[0];
+
+        if (user) {
+            const match = await bcrypt.compare(password, user.password);
+
+            if (match) {
+                if (user.banned) {
+                    res.status(401).json({ message: 'Esta cuenta está baneada' });
+                    return;
+                }
+
+                const token = jwt.sign({ username }, secretKey, { expiresIn: '2d' });
+                res.json({
+                    message: "success",
+                    userId: user.user_id, 
+                    token: token
+                });
+            } else {
+                res.status(401).json({ message: 'Credenciales incorrectas' });
+            }
+        } else {
+            res.status(401).json({ message: 'Credenciales incorrectas' });
+        }
+    } catch (error) {
+        console.error('Error en la consulta:', error);
+        res.status(500).json({ message: 'Error en la consulta' });
+    }
+});
+
+app.post('/loginadmin', async (req, res) => {
     try {
         //sacar del body la info
-        const { correo, contrasena } = req.body;
+        const { username, password } = req.body;
 
         //poner la query a la db
         const result = await client.query(`
-        SELECT psicologo_id, usuario_id, nombre_usuario, edad, correo, contrasena FROM usuario WHERE correo = '${correo}' AND contrasena = '${contrasena}'
+        SELECT admin_id FROM admins WHERE username = '${username}' AND password = '${password}'
         `);
-        const resultado = result.rows;
+        const result_query = result.rows;
 
         //verificar resultado obtenido de la db. La db devuelve un arreglo con los resultados en JSON
-        if (resultado.length > 0) {
-            //psicologo: type = P_USER8492#$2ASE_392AKSMG
-            //usuario: type = US373_USER$%7FEV
-
-            const bloq = resultado[0].bloqueado;
-
-            if (bloq) res.status(401).json({ message: 'usuario bloqueado' });
-
-            var psicologo = resultado[0].psicologo_id;
-            var tipo = "US373_USER$%7FEV"; //por defecto usuario
-
-            if (psicologo) {
-                tipo = "P_USER8492#$2ASE_392AKSMG";
-            } else {
-                psicologo = null
-            }
-
-            const token = jwt.sign({ correo }, secretKey, { expiresIn: '2d' });
+        if (result_query.length > 0) {
+            const token = jwt.sign({ username }, secretKey, { expiresIn: '2d' });
             res.json({
-                message: "exito",
-                resultado: resultado[0], //es solo 1 resultado efectivo
+                message: "success",
+                resultado: result_query[0], //es solo 1 resultado efectivo
                 token: token,
-                tipo: tipo
             });
         } else {
-            res.status(401).json({ message: 'error credenciales' });
+            res.status(401).json({ message: 'Error de credenciales' });
         }
     } catch (error) {
         console.error('Error en la consulta GET:', error);
         res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
+// Ruta para crear un psicólogo
+app.post('/create_psicologo', async (req, res) => {
+    try {
+        const psychologist = new User(req.body);
+        await psychologist.save();
+        res.status(201).json(psychologist);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Ruta para obtener todos los psicólogos
+app.get('/get_psicologos', async (req, res) => {
+    try {
+        const psychologists = await User.find();
+        res.json(psychologists);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -170,27 +234,6 @@ app.get("/getPublicaciones", async (req, res) => {
         const publicaciones = result.rows;
         // Respuesta de lo que retorno la BDD
         res.status(200).json(publicaciones)
-
-    } catch (error) {
-        console.error('Error en la consulta GET:', error);
-        res.status(500).json({ message: 'Error en la consulta GET' });
-    }
-});
-//get para obtener todas las publicaciones basadas en un hashtag
-
-app.get("/getPublicacionesHashtag", async (req, res) => {
-    try {
-        const result = await client.query(`
-        SELECT p.fecha_publicacion, p.titulo, p.descripcion FROM publicacion p, usuario u, usuario_hashtag uh, hashtag h
-        WHERE u.usuario_id = uh.usuario_id 
-        AND uh.hashtag_id = h.hashtag_id 
-        AND h.hashtag_id = p.hashtag_id 
-        AND h.nombre ='${h.nombre}' GROUP BY p.fecha_publicacion, p.titulo, p.descripcion
-`);
-
-        const publicaciones_hashtag = result.rows;
-        // Respuesta de lo que retorno la BDD
-        res.status(200).json(publicaciones_hashtag)
 
     } catch (error) {
         console.error('Error en la consulta GET:', error);
@@ -466,57 +509,6 @@ app.get("/getPsicologoPorCalificacion", async (req, res) => {
     }
 });
 
-// get para traer a psicologos por orden de cantidad de seguidores
-app.get("/getPsicologoPorSeguidores", async (req, res) => {
-    try {
-        const result = await client.query(`
-        SELECT nombre_1, apellido_1, apellido_2, calificacion, numero_telefono, universidad, descripcion, sexo, cantidad_seguidores FROM psicologo ORDER BY cantidad_seguidores DESC
-        `);
-
-        const psicologo_por_seguidores = result.rows;
-        // Respuesta de lo que retorno la BDD
-        res.status(200).json(psicologo_por_seguidores)
-
-    } catch (error) {
-        console.error('Error en la consulta GET:', error);
-        res.status(500).json({ message: 'Error en la consulta GET' });
-    }
-});
-
-// get para traer a las personas que un usuario sigue
-app.get("/getUsuarioSigue", async (req, res) => {
-    try {
-        const result = await client.query(`
-        WITH seguidos AS (SELECT u.usuario_id, u.nombre_usuario, s.seguido_id FROM usuario u, seguidor s WHERE u.usuario_id = s.seguidor_id)
-        SELECT u.nombre_usuario FROM usuario u, seguidos s  WHERE u.usuario_id = s.seguido_id AND s.usuario_id = '${s.usuario_id}' 
-        `);
-
-        const usuario_sigue = result.rows;
-        // Respuesta de lo que retorno la BDD
-        res.status(200).json(usuario_sigue)
-
-    } catch (error) {
-        console.error('Error en la consulta GET:', error);
-        res.status(500).json({ message: 'Error en la consulta GET' });
-    }
-});
-
-// get para traer hashtags ordenados por interes
-app.get("/getHashtagInteres", async (req, res) => {
-    try {
-        const result = await client.query(`
-        SELECT hashtag_id, nivel_interes FROM usuario_hashtag ORDER BY nivel_interes desc
-        `);
-
-        const hashtag_interes = result.rows;
-        // Respuesta de lo que retorno la BDD
-        res.status(200).json(hashtag_interes)
-
-    } catch (error) {
-        console.error('Error en la consulta GET:', error);
-        res.status(500).json({ message: 'Error en la consulta GET' });
-    }
-});
 
 // get para traer psicologo por su nombre
 app.get("/getPsicologoPorNombre", async (req, res) => {
@@ -534,9 +526,6 @@ app.get("/getPsicologoPorNombre", async (req, res) => {
         res.status(500).json({ message: 'Error en la consulta GET' });
     }
 });
-
-//Faltan querys relacionadas con traer posts por la pregunta que dejé en documento (nose si debían traer imágenes o no xd)
-//Falta lo de crear post, crear publicacion, todos los updates y delete
 
 //INICIATE//
 app.listen(PORT, () => {
