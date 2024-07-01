@@ -7,6 +7,7 @@ const { Client } = require('pg');
 const mongoose = require('mongoose');
 
 const User = require('./models/User');
+const Publication = require('./models/publication');
 
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey("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");
@@ -240,6 +241,41 @@ app.post('/verifyToken', (req, res) => {
 });
 
 //////////////////////////////////////
+
+// Ruta para crear una nueva publicacion
+app.post('/create_publication', async (req, res) => {
+    try {
+        const { titulo, descripcion, tematica, autor_id, imagen, nombre } = req.body;
+
+        const publication = new Publication({
+            titulo,
+            descripcion,
+            tematica,
+            usuarioId: autor_id, // Asigna el ID del autor
+            imagen,
+            nombre
+        });
+
+        await publication.save();
+        res.status(201).json({ message: "Publicación creada con éxito", publication });
+        console.log('Publicación creada con éxito:', publication);
+    } catch (error) {
+        console.error('Error al crear la publicación:', error);
+        res.status(500).json({ message: 'Error al crear la publicación' });
+    }
+});
+
+// Ruta para obtener todas las publicaciones
+app.get('/get_publications', async (req, res) => {
+    try {
+        const publications = await Publication.find().populate('usuarioId'); // Popula el documento del usuario
+        console.log('Publicacines:', publications);
+        res.status(200).json(publications);
+    } catch (error) {
+        console.error('Error al obtener las publicaciones:', error);
+        res.status(500).json({ message: 'Error al obtener las publicaciones' });
+    }
+});
 
 //get para obtener todas las publicaciones de los usuarios
 app.get("/getPublicaciones", async (req, res) => {
