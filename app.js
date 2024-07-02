@@ -10,6 +10,7 @@ const User = require('./models/user');
 const Publication = require('./models/publication');
 const Comment = require('./models/coment');
 const Post = require('./models/post');
+const Report = require("./models/report");
 
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey("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");
@@ -179,6 +180,34 @@ app.post('/loginadmin', async (req, res) => {
     }
 });
 
+app.post('/loginpsicologo', async (req, res) => {
+    try {
+        //sacar del body la info
+        const { username, password } = req.body;
+
+        //poner la query a la db
+        const result = await client.query(`
+        SELECT psicologo_id FROM psicologos WHERE username = '${username}' AND password = '${password}'
+        `);
+        const result_query = result.rows;
+
+        //verificar resultado obtenido de la db. La db devuelve un arreglo con los resultados en JSON
+        if (result_query.length > 0) {
+            const token = jwt.sign({ username }, secretKey, { expiresIn: '2d' });
+            res.json({
+                message: "success",
+                resultado: result_query[0], //es solo 1 resultado efectivo
+                token: token,
+            });
+        } else {
+            res.status(401).json({ message: 'Error de credenciales' });
+        }
+    } catch (error) {
+        console.error('Error en la consulta GET:', error);
+        res.status(500).json({ message: 'Error en la consulta GET' });
+    }
+});
+
 // Ruta para crear un psicólogo
 app.post('/create_psicologo', async (req, res) => {
     const {nombre, apellido, apellido_2, universidad, descripcion, correo, sexo, edad, telefono, region, ciudad, comuna, pais, metodo, imagen} = req.body;
@@ -215,6 +244,38 @@ app.get('/get_psicologos', async (req, res) => {
         res.json(psychologists);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// Ruta para obtener todos los reportes
+app.get('/get_reportes', async (req, res) => {
+    try {
+        const reports = await Report.find();
+        res.json(reports);
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener los reportes." });
+    }
+});
+
+// Ruta para crear un reporte
+app.post('/report', async (req, res) => {
+    const {reportador_id, reportado_id, fecha, descripcion} = req.body;
+
+    try{
+        const reporte = new Report({
+            descripcion,
+            fecha,
+            reportador_id,
+            reportado_id
+        });
+
+        //guardar nuevo comentario creado
+        await reporte.save();
+
+        res.status(201).json({ message: 'Reporte creado.' });
+    }catch(e){
+        console.error('Error al crear el comentario:', e);
+        res.status(500).json({ message: 'Error al crear el reporte.' });
     }
 });
 
@@ -283,7 +344,7 @@ app.post('/create/post', async (req, res) => {
         });
         console.log(post);
         await post.save();
-        res.status(201).json({ message: "Publicación creada con éxito" });
+        res.status(201).json({ message: "Artículo creado con éxito" });
     } catch (error) {
         console.error('Error al crear el post:', error);
         res.status(500).json({ message: 'Error al crear el post' });
@@ -349,11 +410,6 @@ app.post('/comment', async (req, res) => {
     }
 
 });
-
-
-
-
-
 
 
 //get para obtener todas las publicaciones de los usuarios
