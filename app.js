@@ -6,8 +6,10 @@ const jwt = require('jsonwebtoken');
 const { Client } = require('pg');
 const mongoose = require('mongoose');
 
-const User = require('./models/User');
+const User = require('./models/user');
 const Publication = require('./models/publication');
+const Comment = require('./models/coment');
+const Post = require('./models/post');
 
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey("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");
@@ -117,10 +119,10 @@ app.post('/loginuser', async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // Seleccionar el usuario y la contraseña cifrada de la base de datos
+        // Seleccionar el usuario y la contraseña cifrada de la base de datos usando consultas preparadas
         const result = await client.query(`
-            SELECT user_id, password, banned FROM users WHERE username = '${username}'
-        `);
+            SELECT user_id, password, banned FROM users WHERE username = $1
+        `, [username]);
         const user = result.rows[0];
 
         if (user) {
@@ -131,9 +133,8 @@ app.post('/loginuser', async (req, res) => {
                     res.status(401).json({ message: 'Esta cuenta está baneada' });
                     return;
                 }
-
                 const token = jwt.sign({ username }, secretKey, { expiresIn: '2d' });
-                res.json({
+                res.status(200).json({
                     message: "success",
                     userId: user.user_id, 
                     token: token
@@ -180,7 +181,7 @@ app.post('/loginadmin', async (req, res) => {
 
 // Ruta para crear un psicólogo
 app.post('/create_psicologo', async (req, res) => {
-    const {nombre, apellido, apellido_2, universidad, descripcion, sexo, edad, telefono, region, ciudad, comuna, pais, metodo} = req.body;
+    const {nombre, apellido, apellido_2, universidad, descripcion, correo, sexo, edad, telefono, region, ciudad, comuna, pais, metodo, imagen} = req.body;
     try {
         const psychologist = new User({
                 nombre: nombre,
@@ -196,6 +197,8 @@ app.post('/create_psicologo', async (req, res) => {
                 comuna: comuna,
                 pais: pais,
                 metodo: metodo,
+                imagen: imagen,
+                correo: correo
             });
         await psychologist.save();
         res.status(201).json({ message: "success"});
@@ -214,14 +217,6 @@ app.get('/get_psicologos', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
-app.get("/query", async (req, res) => {
-    const result = await client.query(`
-        SELECT * FROM usuario
-        `);
-    const resultado = result.rows;
-    res.json(resultado);
-})
 
 //verificarToken-Autorizado
 app.post('/verifyToken', (req, res) => {
@@ -245,17 +240,22 @@ app.post('/verifyToken', (req, res) => {
 // Ruta para crear una nueva publicacion
 app.post('/create_publication', async (req, res) => {
     try {
-        const { titulo, descripcion, tematica, autor_id, imagen, nombre } = req.body;
-
+        const { titulo, descripcion, tematica, autor_id, imagen, nombre, fecha } = req.body;
+        const count = await Publication.countDocuments({});
+        const id = parseInt(count) + 1; 
+        const comentarios = 0;
         const publication = new Publication({
+            id,
             titulo,
             descripcion,
             tematica,
-            usuarioId: autor_id, // Asigna el ID del autor
+            fecha,
+            usuarioId: autor_id,
             imagen,
-            nombre
+            nombre,
+            comentarios
         });
-
+        console.log(publication);
         await publication.save();
         res.status(201).json({ message: "Publicación creada con éxito", publication });
         console.log('Publicación creada con éxito:', publication);
@@ -265,17 +265,96 @@ app.post('/create_publication', async (req, res) => {
     }
 });
 
+// Ruta para crear post de psicólogo
+
+app.post('/create/post', async (req, res) => {
+    try {
+        const { titulo, descripcion, tematica, imagen, fecha, autor } = req.body;
+        const count = await Post.countDocuments({});
+        const id = parseInt(count) + 1; 
+        const post = new Post({
+            id,
+            titulo,
+            descripcion,
+            tematica,
+            fecha,
+            imagen,
+            autor
+        });
+        console.log(post);
+        await post.save();
+        res.status(201).json({ message: "Publicación creada con éxito" });
+    } catch (error) {
+        console.error('Error al crear el post:', error);
+        res.status(500).json({ message: 'Error al crear el post' });
+    }
+});
+
 // Ruta para obtener todas las publicaciones
 app.get('/get_publications', async (req, res) => {
     try {
         const publications = await Publication.find().populate('usuarioId'); // Popula el documento del usuario
-        console.log('Publicacines:', publications);
         res.status(200).json(publications);
     } catch (error) {
         console.error('Error al obtener las publicaciones:', error);
         res.status(500).json({ message: 'Error al obtener las publicaciones' });
     }
 });
+
+// Ruta para obtener todos los articulos
+app.get('/get-posts', async (req, res) => {
+    try {
+        const posts = await Post.find().populate('id'); // Popula el documento del usuario
+        res.status(200).json(posts);
+    } catch (error) {
+        console.error('Error al obtener los posts:', error);
+        res.status(500).json({ message: 'Error al obtener los posts.' });
+    }
+});
+
+// Ruta para crear un comentario en una publicación
+app.post('/comment', async (req, res) => {
+    const {nombre, descripcion, fecha, autor_id, publicacion_id} = req.body;
+
+    try{
+        const publication = await Publication.findOne({id: publicacion_id});
+
+        const comentario = new Comment({
+            nombre,
+            descripcion,
+            fecha,
+            autor_id,
+            publicacion_id
+        });
+
+        //guardar nuevo comentario creado
+        await comentario.save();
+        // Agregar comentario al arreglo de comentarios en la publicación
+        publication.comments.push({
+            "nombre":nombre,
+            "descripcion":descripcion,
+            "fecha":fecha,
+            "autor_id":autor_id,
+            "publicacion_id":publicacion_id
+        });
+        // Incrementar el contador de comentarios
+        publication.comentarios += 1;
+        // Guardar la publicación con el nuevo comentario
+        await publication.save();
+
+        res.status(201).json({ message: 'Comentario agregado' });
+    }catch(e){
+        console.error('Error al crear el comentario:', e);
+        res.status(500).json({ message: 'Error al crear el comentario' });
+    }
+
+});
+
+
+
+
+
+
 
 //get para obtener todas las publicaciones de los usuarios
 app.get("/getPublicaciones", async (req, res) => {

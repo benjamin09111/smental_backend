@@ -1,20 +1,17 @@
 const mongoose = require('mongoose');
 
-const publicationSchema = new mongoose.Schema({
+const postSchema = new mongoose.Schema({
     id: { type: Number, required: true },
     titulo: { type: String, required: true },
     descripcion: { type: String, required: true },
     tematica: { type: String, required: true },
     fecha: { type: String, required: true },
-    usuarioId: { type: String, required: true }, 
     imagen: { type: String },
-    nombre: { type: String, required: true },
-    comentarios: { type: Number, required: true },
-    comments: [{}]
+    autor: { type: String, required: true },
 }, {
     timestamps: true
 });
 
-const Publication = mongoose.model('Publication', publicationSchema);
+const Post = mongoose.model('Post', postSchema);
 
-module.exports = Publication;
+module.exports = Post;
