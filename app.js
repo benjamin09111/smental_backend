@@ -362,6 +362,16 @@ app.get('/get_publications', async (req, res) => {
     }
 });
 
+app.get('/get_comments', async (req, res) => {
+    try {
+        const comments = await Comment.find(); // Popula el documento del usuario
+        res.status(200).json(comments);
+    } catch (error) {
+        console.error('Error al obtener las publicaciones:', error);
+        res.status(500).json({ message: 'Error al obtener las publicaciones' });
+    }
+});
+
 // Ruta para obtener todos los articulos
 app.get('/get-posts', async (req, res) => {
     try {
